@@ -1,172 +1,169 @@
 import { apiInitializer } from "discourse/lib/api";
-import loadScript from "discourse/lib/load-script";
-
-const CDN_SRC =
-  "https://unpkg.com/wikipedia-preview@1.10.0/dist/wikipedia-preview.umd.cjs?module";
-
-const HOST_ID = "wikipedia-preview-popup-host";
-const BOUND_ATTR = "data-wp-preview-bound";
-const HIDE_DELAY = 250;
-
-function assetSource() {
-  return (
-    settings?.theme_uploads_local?.wikipedia_preview_js ||
-    settings?.theme_uploads?.wikipedia_preview_js ||
-    CDN_SRC
-  );
-}
-
-function log(...args) {
-  console.log("[WP-PREVIEW]", ...args);
-}
-
-function ensureHost() {
-  let host = document.getElementById(HOST_ID);
-
-  if (!host) {
-    host = document.createElement("div");
-    host.id = HOST_ID;
-    host.className = "wikipedia-preview-popup-host is-visible";
-    document.body.appendChild(host);
-    log("host created", host);
-  }
-
-  return host;
-}
-
-function clearHost() {
-  const host = document.getElementById(HOST_ID);
-
-  if (host) {
-    host.innerHTML = "";
-    host.style.left = "";
-    host.style.top = "";
-    host.classList.remove("is-visible");
-    log("host cleared");
-  }
-}
-
-function positionHost(host, anchor) {
-  const rect = anchor.getBoundingClientRect();
-  const scrollX = window.scrollX || window.pageXOffset;
-  const scrollY = window.scrollY || window.pageYOffset;
-
-  host.style.position = "absolute";
-  host.style.left = `${scrollX + rect.left}px`;
-  host.style.top = `${scrollY + rect.bottom + 12}px`;
-  host.style.zIndex = "10050";
-
-  requestAnimationFrame(() => {
-    const hostRect = host.getBoundingClientRect();
-    const maxLeft = scrollX + window.innerWidth - hostRect.width - 16;
-    const minLeft = scrollX + 16;
-    const desiredLeft = Math.min(Math.max(scrollX + rect.left, minLeft), maxLeft);
-
-    host.style.left = `${desiredLeft}px`;
-    log("host positioned", {
-      left: host.style.left,
-      top: host.style.top,
-      width: hostRect.width,
-      height: hostRect.height,
-    });
-  });
-}
-
-function showPreviewFor(anchor) {
-  const title = anchor.dataset.wpTitle || anchor.textContent.trim();
-  const lang = anchor.dataset.wpLang || "en";
-
-  log("showPreviewFor called", { title, lang, anchor });
-
-  if (!title || !window.wikipediaPreview) {
-    log("missing title or wikipediaPreview");
-    return;
-  }
-
-  const host = ensureHost();
-  host.innerHTML = `<div class="wikipedia-preview-loading">Loading preview…</div>`;
-  host.classList.add("is-visible");
-  positionHost(host, anchor);
-
-  window.wikipediaPreview.getPreviewHtml(title, lang, (html) => {
-    log("getPreviewHtml callback fired", { title, lang, htmlLength: html?.length || 0 });
-    host.innerHTML = html;
-    host.classList.add("is-visible");
-    positionHost(host, anchor);
-  });
-}
-
-function bindPreview(anchor) {
-  if (anchor.getAttribute(BOUND_ATTR) === "true") {
-    return;
-  }
-
-  anchor.setAttribute(BOUND_ATTR, "true");
-  anchor.setAttribute("tabindex", "0");
-
-  log("binding anchor", {
-    text: anchor.textContent.trim(),
-    title: anchor.dataset.wpTitle,
-    lang: anchor.dataset.wpLang,
-  });
-
-  anchor.addEventListener("mouseenter", () => {
-    log("mouseenter fired", anchor.textContent.trim());
-    showPreviewFor(anchor);
-  });
-
-  anchor.addEventListener("focus", () => {
-    log("focus fired", anchor.textContent.trim());
-    showPreviewFor(anchor);
-  });
-
-  anchor.addEventListener("mouseleave", () => {
-    log("mouseleave fired", anchor.textContent.trim());
-    setTimeout(() => {
-      const host = document.getElementById(HOST_ID);
-      if (!host || !host.matches(":hover")) {
-        clearHost();
-      }
-    }, HIDE_DELAY);
-  });
-
-  anchor.addEventListener("blur", () => {
-    log("blur fired", anchor.textContent.trim());
-    setTimeout(() => {
-      const host = document.getElementById(HOST_ID);
-      if (!host || !host.matches(":hover")) {
-        clearHost();
-      }
-    }, HIDE_DELAY);
-  });
-}
-
-function initIn(root) {
-  const nodes = root.querySelectorAll("[data-wikipedia-preview]");
-  log("initIn root", root, "found", nodes.length, "nodes");
-
-  nodes.forEach((anchor) => bindPreview(anchor));
-}
+import DTooltip from "discourse/float-kit/components/d-tooltip";
+import I18n from "discourse-i18n";
+import { i18n } from "discourse-i18n";
 
 export default apiInitializer((api) => {
-  loadScript(assetSource()).then(() => {
-    log("script loaded", !!window.wikipediaPreview);
+  const currentLocale = I18n.currentLocale();
 
-    api.decorateCookedElement(
-      (element) => {
-        log("decorateCookedElement fired", element);
-        initIn(element);
-      },
-      { id: "wikipedia-preview-custom-debug", onlyStream: false }
-    );
+  if (!I18n.translations[currentLocale].js.composer) {
+    I18n.translations[currentLocale].js.composer = {};
+  }
 
-    document.addEventListener("click", (event) => {
-      const clickedInsidePopup = event.target.closest(`#${HOST_ID}`);
-      const clickedTrigger = event.target.closest("[data-wikipedia-preview]");
+  I18n.translations[currentLocale].js.composer.placeholder_text = I18n.t(
+    themePrefix("composer.placeholder_text")
+  );
 
-      if (!clickedInsidePopup && !clickedTrigger) {
-        clearHost();
+  api.decorateCookedElement(async (post, helper) => {
+    const wraps = post.querySelectorAll('[data-wrap="wikipedia-lookup"]');
+
+    if (!wraps.length) {
+      return;
+    }
+
+    for (const wrap of wraps) {
+      const searchTerm = wrap.textContent.trim();
+
+      if (!searchTerm) {
+        continue;
       }
-    });
+
+      const data = await getWikipediaPreviewData(searchTerm);
+
+      if (!data) {
+        continue;
+      }
+
+      wrap.innerHTML = "";
+
+      helper.renderGlimmer(
+        wrap,
+        <template>
+          <DTooltip @interactive={{true}} @placement="right" class="wp-lookup wp-preview-tooltip">
+            <:trigger>
+              <span class="wp-preview-trigger">{{searchTerm}}</span>
+            </:trigger>
+
+            <:content>
+              <div class="wp-preview-card">
+                {{#if data.thumbnail}}
+                  <div class="wp-preview-image-wrap">
+                    <img
+                      src={{data.thumbnail}}
+                      alt={{data.title}}
+                      class="wp-preview-image"
+                    />
+                  </div>
+                {{/if}}
+
+                <div class="wp-preview-body">
+                  <div class="wp-preview-title-row">
+                    <strong class="wp-preview-title">{{data.title}}</strong>
+                  </div>
+
+                  {{#if data.extract}}
+                    <div class="wp-preview-extract">
+                      {{trustHTML data.extract}}
+                    </div>
+                  {{else}}
+                    <p class="wp-preview-excerpt">{{data.excerpt}}</p>
+                  {{/if}}
+
+                  <p class="wp-preview-link-row">
+                    {{i18n (themePrefix "tooltip_before_link_text")}}
+                    <a
+                      href={{data.url}}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {{data.url}}
+                    </a>
+                  </p>
+                </div>
+              </div>
+            </:content>
+          </DTooltip>
+        </template>
+      );
+    }
+  });
+
+  api.addComposerToolbarPopupMenuOption({
+    action: (toolbarEvent) => {
+      toolbarEvent.applySurround(
+        '[wrap="wikipedia-lookup"]',
+        "[/wrap]",
+        "placeholder_text"
+      );
+    },
+    icon: "fab-wikipedia-w",
+    label: themePrefix("composer.add_wrap_button_text"),
   });
 });
+
+async function getWikipediaPreviewData(searchTerm) {
+  const cacheKey = `wp-preview:${settings.wikipedia_base_url}:${searchTerm}`;
+  const cached = sessionStorage.getItem(cacheKey);
+
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch {
+      sessionStorage.removeItem(cacheKey);
+    }
+  }
+
+  const headers = {
+    "Api-User-Agent": "Discourse Wikipedia Preview Theme Component",
+  };
+
+  const searchRes = await fetch(
+    `https://${settings.wikipedia_base_url}/w/rest.php/v1/search/page?q=${encodeURIComponent(searchTerm)}&limit=1`,
+    { headers }
+  );
+
+  if (!searchRes.ok) {
+    return null;
+  }
+
+  const searchData = await searchRes.json();
+  const page = searchData?.pages?.[0];
+
+  if (!page?.key) {
+    return null;
+  }
+
+  const summaryRes = await fetch(
+    `https://${settings.wikipedia_base_url}/api/rest_v1/page/summary/${encodeURIComponent(page.key)}`,
+    { headers }
+  );
+
+  if (!summaryRes.ok) {
+    return {
+      title: page.title || searchTerm,
+      excerpt: stripHtml(page.excerpt || ""),
+      extract: null,
+      key: page.key,
+      url: `https://${settings.wikipedia_base_url}/wiki/${page.key}`,
+      thumbnail: null,
+    };
+  }
+
+  const summary = await summaryRes.json();
+
+  const result = {
+    title: summary.title || page.title || searchTerm,
+    excerpt: stripHtml(page.excerpt || summary.extract || ""),
+    extract: summary.extract_html || null,
+    key: page.key,
+    url: summary.content_urls?.desktop?.page || `https://${settings.wikipedia_base_url}/wiki/${page.key}`,
+    thumbnail: summary.thumbnail?.source || null,
+  };
+
+  sessionStorage.setItem(cacheKey, JSON.stringify(result));
+  return result;
+}
+
+function stripHtml(html) {
+  return html.replace(/(<([^>]+)>)/gi, "").trim();
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Discourse Wikipedia Preview",
+  "about_url": "https://github.com/wikimedia/wikipedia-preview",
+  "license_url": "https://github.com/wikimedia/wikipedia-preview/blob/main/LICENSE",
+  "component": true,
+  "authors": "Perplexity",
+  "theme_version": "0.3.0",
+  "minimum_discourse_version": "3.3.0",
+  "assets": {
+    "wikipedia_preview_js": "assets/wikipedia-preview.umd.cjs",
+    "wikipedia_preview_link_css": "assets/wikipedia-preview-link.css"
+  }
+}

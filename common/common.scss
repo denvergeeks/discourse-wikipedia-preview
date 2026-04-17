@@ -1,0 +1,40 @@
+.wikipedia-preview,
+.mwe-popups,
+.mwe-popups-type-generic {
+  z-index: 1001;
+}
+
+.wmf-wp-with-preview,
+[data-wikipedia-preview] {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 0.16em;
+}
+
+.wp-preview-preset--standard {
+  --wp-popup-max-width: 420px;
+  --wp-image-max-height: 180px;
+}
+
+.wp-preview-preset--few_images,
+.wp-preview-preset--few-images {
+  --wp-popup-max-width: 400px;
+  --wp-image-max-height: 120px;
+}
+
+.wp-preview-preset--many_images,
+.wp-preview-preset--many-images {
+  --wp-popup-max-width: 460px;
+  --wp-image-max-height: 260px;
+}
+
+.wp-preview-preset--text_first,
+.wp-preview-preset--text-first {
+  --wp-popup-max-width: 420px;
+  --wp-image-max-height: 96px;
+}
+
+.wp-preview-preset--compact {
+  --wp-popup-max-width: 320px;
+  --wp-image-max-height: 90px;
+}

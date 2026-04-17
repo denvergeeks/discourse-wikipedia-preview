@@ -1,0 +1,3 @@
+en:
+  theme_metadata:
+    description: "Adds Wikimedia Wikipedia Preview popups to Discourse cooked posts and composer preview with admin-controlled device, trigger, and display options."

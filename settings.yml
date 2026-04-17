@@ -1,90 +1,24 @@
-wikipedia_preview_enabled:
-  default: true
-  type: bool
-  description: "Enable Wikipedia Preview across the site"
-
-wikipedia_preview_enable_desktop:
-  default: true
-  type: bool
-  description: "Enable previews on desktop and other hover-capable devices"
-
-wikipedia_preview_enable_mobile:
-  default: true
-  type: bool
-  description: "Enable previews on phones and other touch-first devices"
-
-wikipedia_preview_in_posts:
-  default: true
-  type: bool
-  description: "Enable previews in rendered topics, posts, and other cooked content"
-
-wikipedia_preview_in_composer_preview:
-  default: true
-  type: bool
-  description: "Enable previews in the live composer preview pane"
-
-wikipedia_preview_trigger_source:
-  default: both
-  type: enum
-  description: "Choose whether Wikipedia links, manual spans, or both should trigger previews"
-  choices:
-    - links
-    - spans
-    - both
-
-wikipedia_preview_activation_mode:
-  default: hybrid
-  type: enum
-  description: "Hover on desktop, tap on touch, or force one interaction style everywhere"
-  choices:
-    - hover
-    - click
-    - hybrid
-
-wikipedia_preview_card_preset:
-  default: standard
-  type: enum
-  description: "Visual density preset for the preview card"
-  choices:
-    - standard
-    - few_images
-    - many_images
-    - text_first
-    - compact
-
-wikipedia_preview_lang:
-  default: en
+wikipedia_base_url:
+  default: en.wikipedia.org
   type: string
-  description: "Default Wikipedia language code, for example en, fr, or de"
+  description: theme_metadata.settings.wikipedia_base_url
 
-wikipedia_preview_color_scheme:
-  default: detect
-  type: enum
-  description: "Preview theme color mode"
-  choices:
-    - detect
-    - light
-    - dark
-
-wikipedia_preview_selector:
-  default: ".wmf-wp-with-preview, [data-wikipedia-preview]"
-  type: string
-  description: "CSS selector used for manual trigger elements when spans mode is enabled"
-
-wikipedia_preview_use_upstream_link_styles:
-  default: false
+wikipedia_preview_show_image:
+  default: true
   type: bool
-  description: "Load the upstream wikipedia-preview link styling asset for manual trigger elements"
+  description: theme_metadata.settings.wikipedia_preview_show_image
 
-wikipedia_preview_vendor_mode:
-  default: local
-  type: enum
-  description: "Prefer vendored local assets in production, or temporarily use CDN during development"
-  choices:
-    - local
-    - cdn
-
-wikipedia_preview_debug:
-  default: false
+wikipedia_preview_use_extract_html:
+  default: true
   type: bool
-  description: "Log initialization details in the browser console"
+  description: theme_metadata.settings.wikipedia_preview_use_extract_html
+
+wikipedia_preview_tooltip_placement:
+  default: right
+  type: enum
+  choices:
+    - right
+    - left
+    - top
+    - bottom
+  description: theme_metadata.settings.wikipedia_preview_tooltip_placement

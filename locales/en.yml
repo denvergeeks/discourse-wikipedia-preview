@@ -1,3 +1,14 @@
 en:
   theme_metadata:
-    description: "Adds Wikimedia Wikipedia Preview popups to Discourse cooked posts and composer preview with admin-controlled device, trigger, and display options."
+    description: "Adds Wikipedia preview tooltips to wrapped text in the composer and cooked posts."
+    settings:
+      wikipedia_base_url: "Wikipedia base domain to query, for example en.wikipedia.org, fr.wikipedia.org, or de.wikipedia.org."
+      wikipedia_preview_show_image: "Show article thumbnail image in the tooltip when available."
+      wikipedia_preview_use_extract_html: "Use the HTML summary extract returned by Wikipedia. Disable to use plain excerpt text only."
+      wikipedia_preview_tooltip_placement: "Tooltip placement relative to the wrapped term."
+
+  composer:
+    placeholder_text: "Wikipedia article title"
+    add_wrap_button_text: "Wikipedia preview"
+
+  tooltip_before_link_text: "Read more on Wikipedia:"

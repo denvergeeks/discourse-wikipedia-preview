@@ -66,7 +66,7 @@ function assetSource(componentSettings) {
     return CDN_SRC;
   }
 
-  return settings.theme_uploads.wikipedia_preview_js;
+  return settings.theme_uploads_local.wikipedia_preview_js;
 }
 
 function loadOptionalLinkCss(componentSettings, debug) {
@@ -74,7 +74,7 @@ function loadOptionalLinkCss(componentSettings, debug) {
     return;
   }
 
-  const href = settings.theme_uploads.wikipedia_preview_link_css;
+  const href = settings.theme_uploads_local.wikipedia_preview_link_css;
   if (!href) {
     debugLog(debug, "link stylesheet asset missing");
     return;

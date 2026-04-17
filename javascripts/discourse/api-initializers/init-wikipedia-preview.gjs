@@ -6,7 +6,7 @@ const CDN_SRC =
 
 const HOST_ID = "wikipedia-preview-popup-host";
 const BOUND_ATTR = "data-wp-preview-bound";
-const HIDE_DELAY = 180;
+const HIDE_DELAY = 250;
 
 function assetSource() {
   return (
@@ -16,14 +16,19 @@ function assetSource() {
   );
 }
 
+function log(...args) {
+  console.log("[WP-PREVIEW]", ...args);
+}
+
 function ensureHost() {
   let host = document.getElementById(HOST_ID);
 
   if (!host) {
     host = document.createElement("div");
     host.id = HOST_ID;
-    host.className = "wikipedia-preview-popup-host";
+    host.className = "wikipedia-preview-popup-host is-visible";
     document.body.appendChild(host);
+    log("host created", host);
   }
 
   return host;
@@ -31,11 +36,13 @@ function ensureHost() {
 
 function clearHost() {
   const host = document.getElementById(HOST_ID);
+
   if (host) {
     host.innerHTML = "";
-    host.classList.remove("is-visible");
     host.style.left = "";
     host.style.top = "";
+    host.classList.remove("is-visible");
+    log("host cleared");
   }
 }
 
@@ -44,8 +51,10 @@ function positionHost(host, anchor) {
   const scrollX = window.scrollX || window.pageXOffset;
   const scrollY = window.scrollY || window.pageYOffset;
 
+  host.style.position = "absolute";
   host.style.left = `${scrollX + rect.left}px`;
-  host.style.top = `${scrollY + rect.bottom + 10}px`;
+  host.style.top = `${scrollY + rect.bottom + 12}px`;
+  host.style.zIndex = "10050";
 
   requestAnimationFrame(() => {
     const hostRect = host.getBoundingClientRect();
@@ -54,37 +63,23 @@ function positionHost(host, anchor) {
     const desiredLeft = Math.min(Math.max(scrollX + rect.left, minLeft), maxLeft);
 
     host.style.left = `${desiredLeft}px`;
+    log("host positioned", {
+      left: host.style.left,
+      top: host.style.top,
+      width: hostRect.width,
+      height: hostRect.height,
+    });
   });
-}
-
-function wirePopupHover(host, anchor) {
-  let hideTimer;
-
-  const cancelHide = () => {
-    if (hideTimer) {
-      clearTimeout(hideTimer);
-      hideTimer = null;
-    }
-  };
-
-  const scheduleHide = () => {
-    cancelHide();
-    hideTimer = setTimeout(() => {
-      clearHost();
-    }, HIDE_DELAY);
-  };
-
-  anchor.addEventListener("mouseenter", cancelHide);
-  anchor.addEventListener("mouseleave", scheduleHide);
-  host.addEventListener("mouseenter", cancelHide);
-  host.addEventListener("mouseleave", scheduleHide);
 }
 
 function showPreviewFor(anchor) {
   const title = anchor.dataset.wpTitle || anchor.textContent.trim();
   const lang = anchor.dataset.wpLang || "en";
 
+  log("showPreviewFor called", { title, lang, anchor });
+
   if (!title || !window.wikipediaPreview) {
+    log("missing title or wikipediaPreview");
     return;
   }
 
@@ -94,10 +89,10 @@ function showPreviewFor(anchor) {
   positionHost(host, anchor);
 
   window.wikipediaPreview.getPreviewHtml(title, lang, (html) => {
+    log("getPreviewHtml callback fired", { title, lang, htmlLength: html?.length || 0 });
     host.innerHTML = html;
     host.classList.add("is-visible");
     positionHost(host, anchor);
-    wirePopupHover(host, anchor);
   });
 }
 
@@ -107,16 +102,26 @@ function bindPreview(anchor) {
   }
 
   anchor.setAttribute(BOUND_ATTR, "true");
+  anchor.setAttribute("tabindex", "0");
+
+  log("binding anchor", {
+    text: anchor.textContent.trim(),
+    title: anchor.dataset.wpTitle,
+    lang: anchor.dataset.wpLang,
+  });
 
   anchor.addEventListener("mouseenter", () => {
+    log("mouseenter fired", anchor.textContent.trim());
     showPreviewFor(anchor);
   });
 
   anchor.addEventListener("focus", () => {
+    log("focus fired", anchor.textContent.trim());
     showPreviewFor(anchor);
   });
 
   anchor.addEventListener("mouseleave", () => {
+    log("mouseleave fired", anchor.textContent.trim());
     setTimeout(() => {
       const host = document.getElementById(HOST_ID);
       if (!host || !host.matches(":hover")) {
@@ -126,6 +131,7 @@ function bindPreview(anchor) {
   });
 
   anchor.addEventListener("blur", () => {
+    log("blur fired", anchor.textContent.trim());
     setTimeout(() => {
       const host = document.getElementById(HOST_ID);
       if (!host || !host.matches(":hover")) {
@@ -136,18 +142,22 @@ function bindPreview(anchor) {
 }
 
 function initIn(root) {
-  root
-    .querySelectorAll("[data-wikipedia-preview]")
-    .forEach((anchor) => bindPreview(anchor));
+  const nodes = root.querySelectorAll("[data-wikipedia-preview]");
+  log("initIn root", root, "found", nodes.length, "nodes");
+
+  nodes.forEach((anchor) => bindPreview(anchor));
 }
 
 export default apiInitializer((api) => {
   loadScript(assetSource()).then(() => {
+    log("script loaded", !!window.wikipediaPreview);
+
     api.decorateCookedElement(
       (element) => {
+        log("decorateCookedElement fired", element);
         initIn(element);
       },
-      { id: "wikipedia-preview-custom", onlyStream: false }
+      { id: "wikipedia-preview-custom-debug", onlyStream: false }
     );
 
     document.addEventListener("click", (event) => {
